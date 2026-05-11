@@ -52,6 +52,18 @@ export const updateHostStatus = (id, status) => put(`/host/${id}/status`, null, 
 // 审核主持人入驻申请 action: 'approve' | 'reject'
 export const auditHost = (id, action) => put(`/host/${id}/audit`, null, { params: { action } })
 
+// 管理端上传文件（头像/资质证明等）
+export const uploadHostFile = (formData) => {
+  return request({
+    url: '/host/uploadFile',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
 // 主持人导入导出
 export const importHost = (formData) => {
   return request({

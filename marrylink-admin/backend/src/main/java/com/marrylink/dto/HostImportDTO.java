@@ -6,7 +6,6 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * 主持人导入DTO
@@ -23,6 +22,10 @@ public class HostImportDTO {
     @ColumnWidth(15)
     private String stageName;
 
+    @ExcelProperty(value = "性别")
+    @ColumnWidth(10)
+    private String gender;
+
     @ExcelProperty(value = "手机号")
     @ColumnWidth(15)
     private String phone;
@@ -34,6 +37,14 @@ public class HostImportDTO {
     @ExcelProperty(value = "服务价格(元/场)")
     @ColumnWidth(15)
     private BigDecimal price;
+
+    @ExcelProperty(value = "从业年限")
+    @ColumnWidth(12)
+    private Integer yearsOfExperience;
+
+    @ExcelProperty(value = "服务地区")
+    @ColumnWidth(20)
+    private String serviceAreas;
 
     @ExcelProperty(value = "描述")
     @ColumnWidth(30)

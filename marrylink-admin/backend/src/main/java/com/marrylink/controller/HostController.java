@@ -145,6 +145,46 @@ public class HostController {
         }
     }
 
+    /**
+     * 管理端通用文件上传（头像、资质证明、个人照片等）
+     * @param file 上传的文件
+     * @param type 文件类型：avatars / certificates / photos
+     */
+    @PostMapping("/uploadFile")
+    public Result<String> uploadFile(@RequestParam("file") MultipartFile file,
+                                     @RequestParam(value = "type", defaultValue = "avatars") String type) {
+        if (file.isEmpty()) {
+            return Result.error("文件不能为空");
+        }
+
+        // 限制type目录只能是白名单内的值
+        List<String> allowedTypes = Arrays.asList("avatars", "certificates", "photos");
+        if (!allowedTypes.contains(type)) {
+            return Result.error("不支持的文件类型目录");
+        }
+
+        try {
+            String originalFilename = file.getOriginalFilename();
+            String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            String filename = UUID.randomUUID().toString() + extension;
+
+            String uploadDir = System.getProperty("user.dir") + File.separator + "marrylink-admin"
+                    + File.separator + "uploads" + File.separator + type;
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            Path filePath = uploadPath.resolve(filename);
+            file.transferTo(filePath.toFile());
+
+            String fileUrl = "/uploads/" + type + "/" + filename;
+            return Result.ok(fileUrl);
+        } catch (IOException e) {
+            return Result.error("文件上传失败");
+        }
+    }
+
     @PutMapping
     public Result<Void> update(@RequestBody Host host) {
         hostService.updateHost(host);
@@ -295,7 +335,7 @@ public class HostController {
     }
 
     /**
-     * 下载导入模板
+     * 下载导入模板（动态生成，保持与 HostImportDTO 一致）
      */
     @GetMapping("/template")
     @PreAuthorize("hasRole('ADMIN')")
@@ -306,19 +346,21 @@ public class HostController {
             String fileName = URLEncoder.encode("主持人导入模板", StandardCharsets.UTF_8.toString()).replaceAll("\\+", "%20");
             response.setHeader("Content-disposition", "attachment;filename*=utf-8''" + fileName + ".xlsx");
 
-            // 从 resources 目录读取模板文件
+            // 先尝试从 resources 目录读取静态模板文件
             InputStream inputStream = getClass().getClassLoader().getResourceAsStream("excel/hostImport.xlsx");
-            if (inputStream == null) {
-                throw new RuntimeException("模板文件不存在");
+            if (inputStream != null) {
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                    response.getOutputStream().write(buffer, 0, bytesRead);
+                }
+                inputStream.close();
+            } else {
+                // 静态模板不存在时，动态生成
+                EasyExcel.write(response.getOutputStream(), HostImportDTO.class)
+                        .sheet("主持人导入模板")
+                        .doWrite(Collections.emptyList());
             }
-
-            // 将模板文件内容写入响应输出流
-            byte[] buffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                response.getOutputStream().write(buffer, 0, bytesRead);
-            }
-            inputStream.close();
             response.getOutputStream().flush();
         } catch (IOException e) {
             throw new RuntimeException("模板下载失败: " + e.getMessage());

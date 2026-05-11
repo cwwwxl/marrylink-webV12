@@ -38,6 +38,10 @@ public class Host {
     private List<String> tags;
     private String description;
     /**
+     * 个人照片（JSON数组，存放多张照片URL）
+     */
+    private String photos;
+    /**
      * 是否可接单 0=禁止 1=允许
      */
     private Integer canAcceptOrder;

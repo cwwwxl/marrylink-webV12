@@ -114,16 +114,35 @@ public class HostImportListener extends AnalysisEventListener<HostImportDTO> {
         Host host = new Host();
         host.setName(data.getName());
         host.setStageName(data.getStageName());
+        host.setGender(data.getGender());
         host.setPhone(data.getPhone());
         host.setEmail(data.getEmail());
         host.setPrice(data.getPrice());
+        host.setYearsOfExperience(data.getYearsOfExperience());
         host.setDescription(data.getDescription());
         host.setOrderCount(0);
+
+        // 处理服务地区（转为JSON数组）
+        if (StrUtil.isNotBlank(data.getServiceAreas())) {
+            String areas = data.getServiceAreas().trim();
+            if (!areas.startsWith("[")) {
+                // 支持逗号或顿号分隔
+                String[] areaArr = areas.split("[,，、]");
+                StringBuilder sb = new StringBuilder("[");
+                for (int i = 0; i < areaArr.length; i++) {
+                    if (i > 0) sb.append(",");
+                    sb.append("\"").append(areaArr[i].trim()).append("\"");
+                }
+                sb.append("]");
+                host.setServiceAreas(sb.toString());
+            } else {
+                host.setServiceAreas(areas);
+            }
+        }
 
         // 解析入驻时间
         if (data.getJoinTime() != null) {
             host.setJoinTime(data.getJoinTime());
-//            host.setJoinTime(LocalDate.parse(data.getJoinTime(), DATE_FORMATTER));
         } else {
             host.setJoinTime(LocalDate.now());
         }

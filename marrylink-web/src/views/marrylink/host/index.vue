@@ -137,35 +137,70 @@
     </el-card>
 
     <!-- 表单弹窗 -->
-    <el-dialog v-model="dialog.visible" :title="dialog.title" width="600px" @close="handleCloseDialog">
+    <el-dialog v-model="dialog.visible" :title="dialog.title" width="750px" @close="handleCloseDialog">
       <el-form ref="formRef" :model="formData" :rules="rules" label-width="100px">
-        <el-form-item label="主持人姓名" prop="name">
-          <el-input v-model="formData.name" placeholder="请输入姓名" />
-        </el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="主持人姓名" prop="name">
+              <el-input v-model="formData.name" placeholder="请输入姓名" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="艺名" prop="stageName">
+              <el-input v-model="formData.stageName" placeholder="请输入艺名" />
+            </el-form-item>
+          </el-col>
+        </el-row>
 
-        <el-form-item label="艺名" prop="stageName">
-          <el-input v-model="formData.stageName" placeholder="请输入艺名" />
-        </el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="性别" prop="gender">
+              <el-select v-model="formData.gender" placeholder="请选择性别" style="width: 100%">
+                <el-option label="男" value="男" />
+                <el-option label="女" value="女" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="从业年限" prop="yearsOfExperience">
+              <el-input-number v-model="formData.yearsOfExperience" :min="0" :max="50" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
 
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="formData.phone" placeholder="请输入手机号" />
-        </el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="手机号" prop="phone">
+              <el-input v-model="formData.phone" placeholder="请输入手机号" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="邮箱" prop="email">
+              <el-input v-model="formData.email" placeholder="请输入邮箱" />
+            </el-form-item>
+          </el-col>
+        </el-row>
 
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="formData.email" placeholder="请输入邮箱" />
-        </el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="服务价格" prop="price">
+              <el-input-number v-model="formData.price" :min="0" :precision="2" style="width: 100%" />
+              <span class="ml-2" style="white-space: nowrap;">元/场</span>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="入驻时间" prop="joinTime">
+              <el-date-picker v-model="formData.joinTime" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
 
-        <el-form-item label="服务价格" prop="price">
-          <el-input-number v-model="formData.price" :min="0" :precision="2" />
-          <span class="ml-2">元/场</span>
+        <el-form-item label="服务地区" prop="serviceAreas">
+          <el-input v-model="formData.serviceAreas" placeholder="如: 北京市,上海市（多个用逗号分隔）" />
         </el-form-item>
-
-        <!-- <el-form-item label="服务地区" prop="serviceAreas">
-          <el-input v-model="formData.serviceAreas" placeholder="如:北京市,上海市" />
-        </el-form-item> -->
 
         <el-form-item label="主持人描述" prop="description">
-          <el-input v-model="formData.description" placeholder="主持人描述" />
+          <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入主持人描述/个人简介" />
         </el-form-item>
 
         <el-form-item label="服务标签" prop="tags">
@@ -184,16 +219,119 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="入驻时间" prop="joinTime">
-          <el-date-picker v-model="formData.joinTime" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" />
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="状态" prop="status">
+              <el-radio-group v-model="formData.status">
+                <el-radio :label="1">正常</el-radio>
+                <el-radio :label="2">待审核</el-radio>
+                <el-radio :label="0">禁用</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="可接单" prop="canAcceptOrder">
+              <el-switch
+                v-model="formData.canAcceptOrder"
+                :active-value="1"
+                :inactive-value="0"
+                active-text="允许"
+                inactive-text="禁止"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <!-- 头像上传 -->
+        <el-form-item label="头像" prop="avatar">
+          <div class="upload-item">
+            <el-upload
+              class="avatar-uploader"
+              :action="uploadFileUrl"
+              :headers="uploadHeaders"
+              :data="{ type: 'avatars' }"
+              :show-file-list="false"
+              :before-upload="beforeImageUpload"
+              :on-success="(res) => handleUploadSuccess(res, 'avatar')"
+              accept="image/*"
+            >
+              <el-image
+                v-if="formData.avatar"
+                :src="getImageUrl(formData.avatar)"
+                fit="cover"
+                class="upload-preview"
+              />
+              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            </el-upload>
+            <el-button v-if="formData.avatar" type="danger" link size="small" @click="formData.avatar = ''">移除</el-button>
+          </div>
         </el-form-item>
 
-        <el-form-item label="状态" prop="status">
-          <el-radio-group v-model="formData.status">
-            <el-radio :label="1">正常</el-radio>
-            <el-radio :label="2">待审核</el-radio>
-            <el-radio :label="0">禁用</el-radio>
-          </el-radio-group>
+        <!-- 个人照片上传 -->
+        <el-form-item label="个人照片" prop="photos">
+          <div class="upload-item">
+            <el-upload
+              class="avatar-uploader"
+              :action="uploadFileUrl"
+              :headers="uploadHeaders"
+              :data="{ type: 'photos' }"
+              :show-file-list="false"
+              :before-upload="beforeImageUpload"
+              :on-success="handlePhotosUploadSuccess"
+              accept="image/*"
+              multiple
+            >
+              <div class="photos-container">
+                <el-image
+                  v-for="(photo, idx) in formData.photos"
+                  :key="idx"
+                  :src="getImageUrl(photo)"
+                  fit="cover"
+                  class="upload-preview photo-item"
+                  @click.stop
+                />
+                <div class="photo-add-btn">
+                  <el-icon><Plus /></el-icon>
+                </div>
+              </div>
+            </el-upload>
+            <div v-if="formData.photos && formData.photos.length" class="photos-manage">
+              <el-tag
+                v-for="(photo, idx) in formData.photos"
+                :key="idx"
+                closable
+                size="small"
+                @close="formData.photos.splice(idx, 1)"
+              >
+                照片{{ idx + 1 }}
+              </el-tag>
+            </div>
+          </div>
+        </el-form-item>
+
+        <!-- 资质证明上传 -->
+        <el-form-item label="资质证明" prop="certificate">
+          <div class="upload-item">
+            <el-upload
+              class="avatar-uploader"
+              :action="uploadFileUrl"
+              :headers="uploadHeaders"
+              :data="{ type: 'certificates' }"
+              :show-file-list="false"
+              :before-upload="beforeImageUpload"
+              :on-success="(res) => handleUploadSuccess(res, 'certificate')"
+              accept="image/*"
+            >
+              <el-image
+                v-if="formData.certificate"
+                :src="getImageUrl(formData.certificate)"
+                fit="cover"
+                class="upload-preview"
+              />
+              <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
+            </el-upload>
+            <el-button v-if="formData.certificate" type="danger" link size="small" @click="formData.certificate = ''">移除</el-button>
+          </div>
         </el-form-item>
       </el-form>
 
@@ -289,8 +427,8 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { UploadFilled } from '@element-plus/icons-vue'
-import { getHostPage, getHostById, saveHost, updateHost, deleteHost, getTagList, importHost, downloadHostTemplate, auditHost } from '@/api/marrylink-api'
+import { UploadFilled, Plus } from '@element-plus/icons-vue'
+import { getHostPage, getHostById, saveHost, updateHost, deleteHost, getTagList, importHost, downloadHostTemplate, auditHost, uploadHostFile } from '@/api/marrylink-api'
 import Pagination from '@/components/Pagination/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { TOKEN_KEY } from '@/enums/CacheEnum'
@@ -324,15 +462,24 @@ const formData = reactive({
   id: null,
   name: '',
   stageName: '',
+  gender: '',
+  yearsOfExperience: null,
   phone: '',
   email: '',
   avatar: '/uploads/avatars/defAvatar.png',
+  certificate: '',
+  photos: [],
   price: 0,
   serviceAreas: '',
   tags: [],
   joinTime: '',
-  status: 1
+  status: 1,
+  canAcceptOrder: 1,
+  description: ''
 })
+
+// 上传文件相关
+const uploadFileUrl = '/api/v1/host/uploadFile'
 
 const formRef = ref()
 
@@ -414,6 +561,27 @@ async function handleOpenDialog(id) {
   if (id) {
     dialog.title = '编辑主持人'
     const res = await getHostById(id)
+    // 解析 photos JSON 字符串为数组
+    if (res.photos && typeof res.photos === 'string') {
+      try {
+        res.photos = JSON.parse(res.photos)
+      } catch {
+        res.photos = []
+      }
+    } else if (!res.photos) {
+      res.photos = []
+    }
+    // 解析 serviceAreas JSON 为逗号分隔字符串（方便编辑）
+    if (res.serviceAreas) {
+      try {
+        const arr = JSON.parse(res.serviceAreas)
+        if (Array.isArray(arr)) {
+          res.serviceAreas = arr.join(',')
+        }
+      } catch {
+        // 已经是字符串格式，保持不变
+      }
+    }
     Object.assign(formData, res)
   } else {
     dialog.title = '新增主持人'
@@ -427,14 +595,20 @@ function handleCloseDialog() {
     id: null,
     name: '',
     stageName: '',
+    gender: '',
+    yearsOfExperience: null,
     phone: '',
     email: '',
     avatar: '/uploads/avatars/defAvatar.png',
+    certificate: '',
+    photos: [],
     price: 0,
     serviceAreas: '',
     tags: [],
     joinTime: '',
-    status: 1
+    status: 1,
+    canAcceptOrder: 1,
+    description: ''
   })
 }
 
@@ -443,11 +617,16 @@ function handleSubmit() {
     if (valid) {
       loading.value = true
       try {
-        if (formData.id) {
-          await updateHost(formData)
+        // 提交前将 photos 数组转为 JSON 字符串
+        const submitData = { ...formData }
+        if (Array.isArray(submitData.photos)) {
+          submitData.photos = JSON.stringify(submitData.photos)
+        }
+        if (submitData.id) {
+          await updateHost(submitData)
           ElMessage.success('修改成功')
         } else {
-          await saveHost(formData)
+          await saveHost(submitData)
           ElMessage.success('新增成功')
         }
         handleCloseDialog()
@@ -575,6 +754,44 @@ function formatServiceAreas(areas) {
   }
 }
 
+// 图片上传前校验
+function beforeImageUpload(file) {
+  const isImage = file.type.startsWith('image/')
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB!')
+    return false
+  }
+  return true
+}
+
+// 通用上传成功处理（头像、资质证明）
+function handleUploadSuccess(response, field) {
+  if (response.code === 200) {
+    formData[field] = response.data
+    ElMessage.success('上传成功')
+  } else {
+    ElMessage.error(response.message || '上传失败')
+  }
+}
+
+// 个人照片上传成功
+function handlePhotosUploadSuccess(response) {
+  if (response.code === 200) {
+    if (!formData.photos) {
+      formData.photos = []
+    }
+    formData.photos.push(response.data)
+    ElMessage.success('照片上传成功')
+  } else {
+    ElMessage.error(response.message || '上传失败')
+  }
+}
+
 async function handleDownloadTemplate() {
   try {
     const response = await downloadHostTemplate()
@@ -629,5 +846,71 @@ onMounted(() => {
   font-size: 13px;
   color: #606266;
   margin-bottom: 8px;
+}
+
+/* 头像/证明上传样式 */
+.upload-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.avatar-uploader :deep(.el-upload) {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-uploader :deep(.el-upload:hover) {
+  border-color: #409eff;
+}
+
+.avatar-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+}
+
+.upload-preview {
+  width: 100px;
+  height: 100px;
+  border-radius: 6px;
+}
+
+/* 个人照片多张上传 */
+.photos-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.photo-item {
+  width: 80px;
+  height: 80px;
+  border-radius: 4px;
+}
+
+.photo-add-btn {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #8c939d;
+}
+
+.photos-manage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
 }
 </style>

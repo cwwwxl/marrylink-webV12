@@ -14,10 +14,13 @@ public class Host {
     private Long id;
     private String hostCode;
     private String name;
+    private String gender;
+    private Integer yearsOfExperience;
     private String stageName;
     private String phone;
     private String email;
     private String avatar;
+    private String certificate;
     private BigDecimal price;
     private String serviceAreas;
     private Integer status;

@@ -64,7 +64,12 @@
       
       <view class="register-link">
         <text>还没有账号？</text>
-        <text class="link" @click="goToRegister">立即注册</text>
+        <text class="link" @click="goToRegister">新人注册</text>
+      </view>
+
+      <view class="register-link host-register-link">
+        <text>想成为主持人？</text>
+        <text class="link" @click="goToHostRegister">主持人入驻</text>
       </view>
     </view>
   </view>
@@ -181,6 +186,13 @@ export default {
       })
     },
     
+    // 跳转到主持人注册页
+    goToHostRegister() {
+      uni.navigateTo({
+        url: '/pages/host-register/index'
+      })
+    },
+
     // 忘记密码
     handleForgotPassword() {
       uni.showToast({
@@ -328,11 +340,15 @@ export default {
     margin-top: 32rpx;
     font-size: 28rpx;
     color: #666666;
-    
+
     .link {
       color: #1d4ed8;
       margin-left: 8rpx;
     }
+  }
+
+  .host-register-link {
+    margin-top: 20rpx;
   }
 }
 </style>

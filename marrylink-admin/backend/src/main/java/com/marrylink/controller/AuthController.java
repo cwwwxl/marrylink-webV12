@@ -4,8 +4,10 @@ import com.marrylink.common.Result;
 import com.marrylink.dto.ChangePasswordRequest;
 import com.marrylink.dto.LoginRequest;
 import com.marrylink.dto.LoginResponse;
+import com.marrylink.dto.HostRegisterRequest;
 import com.marrylink.dto.RegisterRequest;
 import com.marrylink.entity.AccountMapping;
+import com.marrylink.entity.Host;
 import com.marrylink.entity.SysRole;
 import com.marrylink.entity.SysUserRole;
 import com.marrylink.entity.User;
@@ -13,6 +15,7 @@ import com.marrylink.enums.UserType;
 import com.marrylink.security.CustomUserDetails;
 import com.marrylink.security.JwtTokenProvider;
 import com.marrylink.service.AccountMappingService;
+import com.marrylink.service.IHostService;
 import com.marrylink.service.IUserService;
 import com.marrylink.service.PermissionService;
 import com.marrylink.service.RoleService;
@@ -27,9 +30,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 认证控制器
@@ -46,6 +58,7 @@ public class AuthController {
     private final JwtTokenProvider tokenProvider;
     private final AccountMappingService accountMappingService;
     private final IUserService userService;
+    private final IHostService hostService;
     private final RoleService roleService;
     private final PermissionService permissionService;
     private final UserRoleService userRoleService;
@@ -255,6 +268,129 @@ public class AuthController {
         }
     }
     
+    /**
+     * 主持人注册（App端）
+     * 注册后账号进入待审核状态，需管理员审核通过后方可接单
+     */
+    @PostMapping("/register/host")
+    public Result<String> registerHost(@Validated @RequestBody HostRegisterRequest request) {
+        log.info("Host register attempt: phone={}, name={}", request.getPhone(), request.getName());
+
+        try {
+            // 1. 检查手机号是否已注册为主持人
+            AccountMapping existingAccount = accountMappingService.getByAccountAndType(
+                request.getPhone(), UserType.HOST.getCode()
+            );
+            if (existingAccount != null) {
+                return Result.error("该手机号已注册为主持人");
+            }
+
+            // 2. 生成主持人编号
+            String hostCode = generateHostCode();
+
+            // 3. 创建主持人记录（状态为待审核）
+            Host host = new Host();
+            host.setHostCode(hostCode);
+            host.setName(request.getName());
+            host.setGender(request.getGender());
+            host.setYearsOfExperience(request.getYearsOfExperience());
+            host.setPhone(request.getPhone());
+            host.setAvatar(request.getAvatar());
+            host.setCertificate(request.getCertificate());
+            host.setPrice(request.getPrice() != null ? request.getPrice() : BigDecimal.ZERO);
+            host.setDescription(request.getDescription());
+            host.setStatus(2); // 待审核
+            host.setCanAcceptOrder(0); // 审核通过前不可接单
+            host.setRating(new BigDecimal("5.0"));
+            host.setOrderCount(0);
+            host.setJoinTime(LocalDate.now());
+
+            // 处理服务区域
+            if (request.getServiceAreas() != null && !request.getServiceAreas().isEmpty()) {
+                host.setServiceAreas(request.getServiceAreas());
+            }
+
+            hostService.save(host);
+
+            // 4. 创建账号映射（状态正常，但host status=2待审核 控制是否可用）
+            AccountMapping accountMapping = new AccountMapping();
+            accountMapping.setAccountId(request.getPhone());
+            accountMapping.setUserType(UserType.HOST.getCode());
+            accountMapping.setRefId(host.getId());
+            accountMapping.setPassword(passwordEncoder.encode(request.getPassword()));
+            accountMapping.setStatus(1); // 账号状态正常，通过host.status控制审核
+            accountMappingService.save(accountMapping);
+
+            // 5. 分配主持人角色
+            SysRole hostRole = roleService.lambdaQuery()
+                .eq(SysRole::getRoleCode, "ROLE_HOST")
+                .one();
+            if (hostRole != null) {
+                SysUserRole userRole = new SysUserRole();
+                userRole.setAccountId(accountMapping.getId());
+                userRole.setRoleId(hostRole.getId());
+                userRoleService.save(userRole);
+            }
+
+            log.info("Host register success: phone={}, hostId={}, hostCode={}",
+                     request.getPhone(), host.getId(), hostCode);
+
+            return Result.ok("注册成功，您的账号正在审核中，请等待管理员审核通过后再登录接单。");
+
+        } catch (Exception e) {
+            log.error("Host register failed: phone={}", request.getPhone(), e);
+            return Result.error("注册失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 主持人注册 - 上传文件（个人照片/资质证明）
+     * 此接口为公开接口，注册时上传文件使用
+     */
+    @PostMapping("/register/host/upload")
+    public Result<String> uploadHostRegisterFile(@RequestParam("file") MultipartFile file,
+                                                  @RequestParam(defaultValue = "photo") String type) {
+        if (file.isEmpty()) {
+            return Result.error("文件不能为空");
+        }
+
+        try {
+            String originalFilename = file.getOriginalFilename();
+            String extension = originalFilename != null
+                ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                : ".jpg";
+            String filename = UUID.randomUUID().toString() + extension;
+
+            // 根据类型存储到不同目录
+            String subDir = "photo".equals(type) ? "avatars" : "certificates";
+            String uploadDir = System.getProperty("user.dir") + File.separator
+                + "marrylink-admin" + File.separator + "uploads" + File.separator + subDir;
+            Path uploadPath = Paths.get(uploadDir);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            Path filePath = uploadPath.resolve(filename);
+            file.transferTo(filePath.toFile());
+
+            String fileUrl = "/uploads/" + subDir + "/" + filename;
+            log.info("Host register file uploaded: type={}, url={}", type, fileUrl);
+
+            return Result.ok(fileUrl);
+        } catch (IOException e) {
+            log.error("Host register file upload failed", e);
+            return Result.error("文件上传失败");
+        }
+    }
+
+    /**
+     * 生成主持人编号（MC + 4位序号）
+     */
+    private String generateHostCode() {
+        long count = hostService.count();
+        return String.format("MC%04d", count + 1);
+    }
+
     /**
      * 修改密码
      * 验证旧密码正确后更新为新密码

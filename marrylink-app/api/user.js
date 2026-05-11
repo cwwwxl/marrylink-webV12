@@ -24,6 +24,45 @@ export function register(data) {
 }
 
 /**
+ * 主持人注册
+ */
+export function registerHost(data) {
+  return post('/auth/register/host', data)
+}
+
+/**
+ * 主持人注册 - 上传文件（公开接口，无需token）
+ */
+export function uploadHostRegisterFile(filePath, type = 'photo') {
+  return new Promise((resolve, reject) => {
+    uni.uploadFile({
+      url: BASE_URL + '/auth/register/host/upload?type=' + type,
+      filePath: filePath,
+      name: 'file',
+      success: (res) => {
+        const data = JSON.parse(res.data)
+        if (data.code === '00000' || data.code === 200) {
+          resolve(data)
+        } else {
+          uni.showToast({
+            title: data.message || '上传失败',
+            icon: 'none'
+          })
+          reject(data)
+        }
+      },
+      fail: (err) => {
+        uni.showToast({
+          title: '上传失败',
+          icon: 'none'
+        })
+        reject(err)
+      }
+    })
+  })
+}
+
+/**
  * 获取用户信息
  */
 export function getUserInfo() {

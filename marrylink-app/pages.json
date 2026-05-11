@@ -48,6 +48,14 @@
       }
     },
     {
+      "path": "pages/host-register/index",
+      "style": {
+        "navigationBarTitleText": "主持人注册",
+        "navigationBarBackgroundColor": "#1d4ed8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
       "path": "pages/host/detail",
       "style": {
         "navigationBarTitleText": "主持人详情",

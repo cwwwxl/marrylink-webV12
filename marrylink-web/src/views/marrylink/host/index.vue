@@ -253,10 +253,9 @@
               :http-request="(opts) => doUpload(opts, 'avatars', 'avatar')"
               accept="image/*"
             >
-              <el-image
+              <img
                 v-if="formData.avatar"
                 :src="getImageUrl(formData.avatar)"
-                fit="cover"
                 class="upload-preview"
               />
               <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
@@ -316,10 +315,9 @@
               :http-request="(opts) => doUpload(opts, 'certificates', 'certificate')"
               accept="image/*"
             >
-              <el-image
+              <img
                 v-if="formData.certificate"
                 :src="getImageUrl(formData.certificate)"
-                fit="cover"
                 class="upload-preview"
               />
               <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
@@ -888,6 +886,8 @@ onMounted(() => {
   width: 100px;
   height: 100px;
   border-radius: 6px;
+  object-fit: cover;
+  display: block;
 }
 
 /* 个人照片多张上传 */

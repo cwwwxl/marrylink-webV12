@@ -247,12 +247,10 @@
           <div class="upload-item">
             <el-upload
               class="avatar-uploader"
-              :action="uploadFileUrl"
-              :headers="uploadHeaders"
-              :data="{ type: 'avatars' }"
+              action="#"
               :show-file-list="false"
               :before-upload="beforeImageUpload"
-              :on-success="(res) => handleUploadSuccess(res, 'avatar')"
+              :http-request="(opts) => doUpload(opts, 'avatars', 'avatar')"
               accept="image/*"
             >
               <el-image
@@ -263,38 +261,36 @@
               />
               <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
             </el-upload>
-            <el-button v-if="formData.avatar" type="danger" link size="small" @click="formData.avatar = ''">移除</el-button>
+            <el-button v-if="formData.avatar && formData.avatar !== '/uploads/avatars/defAvatar.png'" type="danger" link size="small" @click="formData.avatar = ''">移除</el-button>
           </div>
         </el-form-item>
 
         <!-- 个人照片上传 -->
-        <el-form-item label="个人照片" prop="photos">
+        <el-form-item label="个人照片">
           <div class="upload-item">
-            <el-upload
-              class="avatar-uploader"
-              :action="uploadFileUrl"
-              :headers="uploadHeaders"
-              :data="{ type: 'photos' }"
-              :show-file-list="false"
-              :before-upload="beforeImageUpload"
-              :on-success="handlePhotosUploadSuccess"
-              accept="image/*"
-              multiple
-            >
-              <div class="photos-container">
-                <el-image
-                  v-for="(photo, idx) in formData.photos"
-                  :key="idx"
-                  :src="getImageUrl(photo)"
-                  fit="cover"
-                  class="upload-preview photo-item"
-                  @click.stop
-                />
+            <div class="photos-container">
+              <el-image
+                v-for="(photo, idx) in formData.photos"
+                :key="idx"
+                :src="getImageUrl(photo)"
+                :preview-src-list="formData.photos.map(p => getImageUrl(p))"
+                :initial-index="idx"
+                fit="cover"
+                class="upload-preview photo-item"
+              />
+              <el-upload
+                class="photo-uploader"
+                action="#"
+                :show-file-list="false"
+                :before-upload="beforeImageUpload"
+                :http-request="(opts) => doUploadPhoto(opts)"
+                accept="image/*"
+              >
                 <div class="photo-add-btn">
                   <el-icon><Plus /></el-icon>
                 </div>
-              </div>
-            </el-upload>
+              </el-upload>
+            </div>
             <div v-if="formData.photos && formData.photos.length" class="photos-manage">
               <el-tag
                 v-for="(photo, idx) in formData.photos"
@@ -314,12 +310,10 @@
           <div class="upload-item">
             <el-upload
               class="avatar-uploader"
-              :action="uploadFileUrl"
-              :headers="uploadHeaders"
-              :data="{ type: 'certificates' }"
+              action="#"
               :show-file-list="false"
               :before-upload="beforeImageUpload"
-              :on-success="(res) => handleUploadSuccess(res, 'certificate')"
+              :http-request="(opts) => doUpload(opts, 'certificates', 'certificate')"
               accept="image/*"
             >
               <el-image
@@ -477,9 +471,6 @@ const formData = reactive({
   canAcceptOrder: 1,
   description: ''
 })
-
-// 上传文件相关
-const uploadFileUrl = '/api/v1/host/uploadFile'
 
 const formRef = ref()
 
@@ -769,26 +760,41 @@ function beforeImageUpload(file) {
   return true
 }
 
-// 通用上传成功处理（头像、资质证明）
-function handleUploadSuccess(response, field) {
-  if (response.code === 200) {
-    formData[field] = response.data
+/**
+ * 通用上传：头像、资质证明（单张，直接赋值到 formData[field]）
+ * @param opts  el-upload 传入的 { file }
+ * @param type  后端目录类型 avatars | certificates | photos
+ * @param field formData 中的字段名
+ */
+async function doUpload(opts, type, field) {
+  const fd = new FormData()
+  fd.append('file', opts.file)
+  fd.append('type', type)
+  try {
+    // uploadHostFile 走 axios，经过 request.ts 拦截器：
+    //   成功时直接返回 response.data（即 URL 字符串）
+    const url = await uploadHostFile(fd)
+    formData[field] = url
     ElMessage.success('上传成功')
-  } else {
-    ElMessage.error(response.message || '上传失败')
+  } catch (e) {
+    ElMessage.error(e.message || '上传失败')
   }
 }
 
-// 个人照片上传成功
-function handlePhotosUploadSuccess(response) {
-  if (response.code === 200) {
-    if (!formData.photos) {
-      formData.photos = []
-    }
-    formData.photos.push(response.data)
+/**
+ * 个人照片上传（多张，追加到 formData.photos 数组）
+ */
+async function doUploadPhoto(opts) {
+  const fd = new FormData()
+  fd.append('file', opts.file)
+  fd.append('type', 'photos')
+  try {
+    const url = await uploadHostFile(fd)
+    if (!formData.photos) formData.photos = []
+    formData.photos.push(url)
     ElMessage.success('照片上传成功')
-  } else {
-    ElMessage.error(response.message || '上传失败')
+  } catch (e) {
+    ElMessage.error(e.message || '上传失败')
   }
 }
 
@@ -889,12 +895,30 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
 }
 
 .photo-item {
   width: 80px;
   height: 80px;
   border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.photo-uploader :deep(.el-upload) {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-uploader :deep(.el-upload:hover) {
+  border-color: #409eff;
 }
 
 .photo-add-btn {

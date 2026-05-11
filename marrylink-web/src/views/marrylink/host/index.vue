@@ -227,11 +227,11 @@
       <div class="audit-images" v-if="auditDialog.data.avatar || auditDialog.data.certificate">
         <div class="audit-image-item" v-if="auditDialog.data.avatar">
           <div class="audit-image-label">个人照片</div>
-          <el-image :src="auditDialog.data.avatar" :preview-src-list="[auditDialog.data.avatar]" fit="cover" style="width: 120px; height: 120px; border-radius: 8px;" />
+          <el-image :src="baseUrl + auditDialog.data.avatar" :preview-src-list="[baseUrl + auditDialog.data.avatar]" fit="cover" style="width: 120px; height: 120px; border-radius: 8px;" />
         </div>
         <div class="audit-image-item" v-if="auditDialog.data.certificate">
           <div class="audit-image-label">资质证明</div>
-          <el-image :src="auditDialog.data.certificate" :preview-src-list="[auditDialog.data.certificate]" fit="cover" style="width: 120px; height: 120px; border-radius: 8px;" />
+          <el-image :src="baseUrl + auditDialog.data.certificate" :preview-src-list="[baseUrl + auditDialog.data.certificate]" fit="cover" style="width: 120px; height: 120px; border-radius: 8px;" />
         </div>
       </div>
 
@@ -252,6 +252,8 @@ import { getHostPage, getHostById, saveHost, updateHost, deleteHost, getTagList,
 import Pagination from '@/components/Pagination/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { TOKEN_KEY } from '@/enums/CacheEnum'
+
+const baseUrl = import.meta.env.VITE_APP_BASE_API
 
 const queryParams = reactive({
   current: 1,

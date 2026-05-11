@@ -122,7 +122,7 @@
           <label class="agreement-label">
             <checkbox :checked="agreed" color="#1d4ed8" />
             <text>我已阅读并同意</text>
-            <text class="link" @click.stop="showAgreement">《主持人服务协议》</text>
+            <text class="link" @click.stop="showAgreement">《主持人入驻协议》</text>
           </label>
         </checkbox-group>
       </view>
@@ -130,7 +130,7 @@
       <view class="btn-group">
         <button class="btn-prev" @click="prevStep">上一步</button>
         <button class="btn-submit" @click="handleSubmit" :disabled="loading || !agreed">
-          {{ loading ? '提交中...' : '提交注册' }}
+          {{ loading ? '提交中...' : '提交入驻申请' }}
         </button>
       </view>
     </view>
@@ -270,15 +270,15 @@ export default {
 
     showAgreement() {
       uni.showModal({
-        title: '主持人服务协议',
-        content: '欢迎注册成为MarryLink平台主持人。注册后您的账号将进入待审核状态，平台管理员审核通过后方可正式接单。您需保证所填信息真实有效。',
+        title: '主持人入驻协议',
+        content: '欢迎入驻MarryLink平台成为主持人。入驻后您的账号将进入待审核状态，平台管理员审核通过后方可正式接单。您需保证所填信息真实有效。',
         showCancel: false
       })
     },
 
     async handleSubmit() {
       if (!this.agreed) {
-        uni.showToast({ title: '请阅读并同意主持人服务协议', icon: 'none' })
+        uni.showToast({ title: '请阅读并同意主持人入驻协议', icon: 'none' })
         return
       }
 
@@ -309,8 +309,8 @@ export default {
 
         if (res.code === '00000' || res.code === 200) {
           uni.showModal({
-            title: '注册成功',
-            content: res.data || '您的账号正在审核中，请等待管理员审核通过后再登录接单。',
+            title: '入驻申请已提交',
+            content: res.data || '您的入驻申请正在审核中，请等待管理员审核通过后再登录接单。',
             showCancel: false,
             success: () => {
               uni.navigateBack()

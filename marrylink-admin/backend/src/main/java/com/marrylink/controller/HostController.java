@@ -173,6 +173,39 @@ public class HostController {
         return Result.ok();
     }
 
+    /**
+     * 审核主持人入驻申请
+     * @param id 主持人ID
+     * @param action approve=通过, reject=拒绝
+     */
+    @PutMapping("/{id}/audit")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Void> auditHost(@PathVariable Long id, @RequestParam String action) {
+        Host host = hostService.getById(id);
+        if (host == null) {
+            return Result.error("主持人不存在");
+        }
+        if (host.getStatus() != 2) {
+            return Result.error("该主持人不在待审核状态");
+        }
+
+        if ("approve".equals(action)) {
+            // 审核通过：状态设为正常，允许接单
+            host.setStatus(1);
+            host.setCanAcceptOrder(1);
+            hostService.updateById(host);
+            return Result.ok();
+        } else if ("reject".equals(action)) {
+            // 审核拒绝：状态设为禁用
+            host.setStatus(0);
+            host.setCanAcceptOrder(0);
+            hostService.updateById(host);
+            return Result.ok();
+        } else {
+            return Result.error("无效的审核操作，请使用 approve 或 reject");
+        }
+    }
+
     @GetMapping("/monthlyOrders")
     public Result<List<Map<String, Object>>> getMonthlyOrders() {
         Long refId = SecurityUtils.getCurrentRefId();

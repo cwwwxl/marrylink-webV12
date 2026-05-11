@@ -335,7 +335,7 @@ public class AuthController {
             log.info("Host register success: phone={}, hostId={}, hostCode={}",
                      request.getPhone(), host.getId(), hostCode);
 
-            return Result.ok("注册成功，您的账号正在审核中，请等待管理员审核通过后再登录接单。");
+            return Result.ok("入驻申请已提交，您的账号正在审核中，请等待管理员审核通过后再登录接单。");
 
         } catch (Exception e) {
             log.error("Host register failed: phone={}", request.getPhone(), e);

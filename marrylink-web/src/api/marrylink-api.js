@@ -49,6 +49,8 @@ export const saveHost = (data) => post('/host', data)
 export const updateHost = (data) => put('/host', data)
 export const deleteHost = (id) => del(`/host/${id}`)
 export const updateHostStatus = (id, status) => put(`/host/${id}/status`, null, { params: { status } })
+// 审核主持人入驻申请 action: 'approve' | 'reject'
+export const auditHost = (id, action) => put(`/host/${id}/audit`, null, { params: { action } })
 
 // 主持人导入导出
 export const importHost = (formData) => {

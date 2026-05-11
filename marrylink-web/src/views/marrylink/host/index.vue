@@ -23,7 +23,7 @@
         <el-form-item label="状态" style="width: 150px;">
           <el-select v-model="queryParams.status" placeholder="全部" clearable >
             <el-option label="正常" :value="1" />
-            <!-- <el-option label="待审核" :value="2" /> -->
+            <el-option label="待审核" :value="2" />
             <el-option label="禁用" :value="0" />
           </el-select>
         </el-form-item>
@@ -70,22 +70,35 @@
           </template>
         </el-table-column>
         <el-table-column label="订单数" prop="orderCount" width="80" />
-        <el-table-column label="状态" width="80">
+        <el-table-column label="状态" width="90">
           <template #default="scope">
-            <el-tag :type="scope.row.status == 1 ? 'success' : 'info'">
-              {{ scope.row.status == 1 ? '正常' : '禁用' }}
-            </el-tag>
+            <el-tag v-if="scope.row.status == 1" type="success">正常</el-tag>
+            <el-tag v-else-if="scope.row.status == 2" type="warning">待审核</el-tag>
+            <el-tag v-else type="info">禁用</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="入驻时间" prop="joinTime" width="150" />
-        <el-table-column label="操作" fixed="right" width="200">
+        <el-table-column label="操作" fixed="right" width="280">
           <template #default="scope">
-            <el-button type="primary" icon="edit" link size="small" @click="handleOpenDialog(scope.row.id)">
-              编辑
-            </el-button>
-            <el-button type="danger" icon="delete" link size="small" @click="handleDelete(scope.row.id)">
-              删除
-            </el-button>
+            <template v-if="scope.row.status == 2 && isAdmin">
+              <el-button type="success" icon="check" link size="small" @click="handleAudit(scope.row.id, 'approve')">
+                通过
+              </el-button>
+              <el-button type="danger" icon="close" link size="small" @click="handleAudit(scope.row.id, 'reject')">
+                拒绝
+              </el-button>
+              <el-button type="primary" icon="view" link size="small" @click="handleOpenAuditDetail(scope.row)">
+                查看
+              </el-button>
+            </template>
+            <template v-else>
+              <el-button type="primary" icon="edit" link size="small" @click="handleOpenDialog(scope.row.id)">
+                编辑
+              </el-button>
+              <el-button type="danger" icon="delete" link size="small" @click="handleDelete(scope.row.id)">
+                删除
+              </el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -156,7 +169,7 @@
         <el-form-item label="状态" prop="status">
           <el-radio-group v-model="formData.status">
             <el-radio :label="1">正常</el-radio>
-            <!-- <el-radio :label="2">待审核</el-radio> -->
+            <el-radio :label="2">待审核</el-radio>
             <el-radio :label="0">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
@@ -199,6 +212,35 @@
         <el-button type="primary" :loading="importLoading" @click="handleImportSubmit">确定导入</el-button>
       </template>
     </el-dialog>
+    <!-- 入驻审核详情弹窗 -->
+    <el-dialog v-model="auditDialog.visible" title="入驻申请详情" width="600px">
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="姓名">{{ auditDialog.data.name }}</el-descriptions-item>
+        <el-descriptions-item label="性别">{{ auditDialog.data.gender || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="手机号">{{ auditDialog.data.phone }}</el-descriptions-item>
+        <el-descriptions-item label="从业年限">{{ auditDialog.data.yearsOfExperience ? auditDialog.data.yearsOfExperience + '年' : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="服务报价">{{ auditDialog.data.price ? '¥' + auditDialog.data.price + '/场' : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="服务区域">{{ formatServiceAreas(auditDialog.data.serviceAreas) }}</el-descriptions-item>
+        <el-descriptions-item label="个人简介" :span="2">{{ auditDialog.data.description || '-' }}</el-descriptions-item>
+      </el-descriptions>
+
+      <div class="audit-images" v-if="auditDialog.data.avatar || auditDialog.data.certificate">
+        <div class="audit-image-item" v-if="auditDialog.data.avatar">
+          <div class="audit-image-label">个人照片</div>
+          <el-image :src="auditDialog.data.avatar" :preview-src-list="[auditDialog.data.avatar]" fit="cover" style="width: 120px; height: 120px; border-radius: 8px;" />
+        </div>
+        <div class="audit-image-item" v-if="auditDialog.data.certificate">
+          <div class="audit-image-label">资质证明</div>
+          <el-image :src="auditDialog.data.certificate" :preview-src-list="[auditDialog.data.certificate]" fit="cover" style="width: 120px; height: 120px; border-radius: 8px;" />
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="auditDialog.visible = false">关闭</el-button>
+        <el-button type="danger" @click="handleAudit(auditDialog.data.id, 'reject'); auditDialog.visible = false">拒绝</el-button>
+        <el-button type="success" @click="handleAudit(auditDialog.data.id, 'approve'); auditDialog.visible = false">通过</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -206,7 +248,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
-import { getHostPage, getHostById, saveHost, updateHost, deleteHost, getTagList, importHost, downloadHostTemplate } from '@/api/marrylink-api'
+import { getHostPage, getHostById, saveHost, updateHost, deleteHost, getTagList, importHost, downloadHostTemplate, auditHost } from '@/api/marrylink-api'
 import Pagination from '@/components/Pagination/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { TOKEN_KEY } from '@/enums/CacheEnum'
@@ -271,6 +313,12 @@ const uploadHeaders = computed(() => ({
   Authorization: localStorage.getItem(TOKEN_KEY) || ''
 }))
 const selectedFile = ref(null)
+
+// 审核弹窗
+const auditDialog = reactive({
+  visible: false,
+  data: {}
+})
 
 onMounted(async () => {
   // 获取所有标签字典
@@ -446,6 +494,37 @@ function handleImportError(error) {
   importLoading.value = false
 }
 
+// 审核操作
+function handleAudit(id, action) {
+  const actionText = action === 'approve' ? '通过' : '拒绝'
+  ElMessageBox.confirm(`确认${actionText}该主持人的入驻申请?`, '审核确认', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: action === 'approve' ? 'success' : 'warning'
+  }).then(async () => {
+    await auditHost(id, action)
+    ElMessage.success(`已${actionText}该入驻申请`)
+    fetchData()
+  }).catch(() => {})
+}
+
+// 查看入驻详情
+function handleOpenAuditDetail(row) {
+  auditDialog.data = { ...row }
+  auditDialog.visible = true
+}
+
+// 格式化服务区域
+function formatServiceAreas(areas) {
+  if (!areas) return '-'
+  try {
+    const arr = JSON.parse(areas)
+    return Array.isArray(arr) ? arr.join('、') : areas
+  } catch {
+    return areas
+  }
+}
+
 async function handleDownloadTemplate() {
   try {
     const response = await downloadHostTemplate()
@@ -482,5 +561,23 @@ onMounted(() => {
 /* 确保标签在表格中正确换行 */
 :deep(.el-table__cell) {
   line-height: 1.8;
+}
+
+.audit-images {
+  display: flex;
+  gap: 24px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #ebeef5;
+}
+
+.audit-image-item {
+  text-align: center;
+}
+
+.audit-image-label {
+  font-size: 13px;
+  color: #606266;
+  margin-bottom: 8px;
 }
 </style>

@@ -63,6 +63,11 @@
       </button>
       
       <view class="register-link">
+        <text>还没有账号？</text>
+        <text class="link" @click="goToRegister">新人注册</text>
+      </view>
+
+      <view class="register-link host-register-link">
         <text>想成为主持人？</text>
         <text class="link" @click="goToHostRegister">主持人入驻</text>
       </view>
@@ -172,6 +177,13 @@ export default {
       } finally {
         this.loading = false
       }
+    },
+    
+    // 跳转到注册页
+    goToRegister() {
+      uni.navigateTo({
+        url: '/pages/register/index'
+      })
     },
     
     // 跳转到主持人注册页
@@ -335,5 +347,8 @@ export default {
     }
   }
 
+  .host-register-link {
+    margin-top: 20rpx;
+  }
 }
 </style>

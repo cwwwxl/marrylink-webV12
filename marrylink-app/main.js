@@ -16,7 +16,7 @@ Vue.mixin({
     // 白名单：不需要登录就能访问的页面
     const whiteList = [
       'pages/login/index',
-      'pages/host-register/index',
+      'pages/register/index',
       'pages/host/index',
       'pages/host/detail',
       'pages/index/index'

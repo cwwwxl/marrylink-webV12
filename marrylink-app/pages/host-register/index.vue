@@ -43,6 +43,16 @@
       </view>
 
       <view class="form-item">
+        <view class="form-label"><text>艺名</text></view>
+        <input class="form-input" type="text" v-model="form.stageName" placeholder="请输入艺名（选填）" />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label"><text>邮箱</text><text class="required">*</text></view>
+        <input class="form-input" type="text" v-model="form.email" placeholder="请输入邮箱地址" />
+      </view>
+
+      <view class="form-item">
         <view class="form-label"><text>性别</text><text class="required">*</text></view>
         <view class="gender-selector">
           <view class="gender-item" :class="{ active: form.gender === '男' }" @click="form.gender = '男'">
@@ -57,6 +67,26 @@
       <view class="form-item">
         <view class="form-label"><text>从业年限</text></view>
         <input class="form-input" type="number" v-model="form.yearsOfExperience" placeholder="请输入从业年限（年）" />
+      </view>
+
+      <view class="form-item">
+        <view class="form-label"><text>个人标签</text></view>
+        <view class="tags-container">
+          <view class="tag-item" v-for="(tag, index) in predefinedTags" :key="index"
+            :class="{ active: selectedTags.includes(tag) }" @click="toggleTag(tag)">
+            <text>{{ tag }}</text>
+          </view>
+        </view>
+        <view class="custom-tag-row">
+          <input class="form-input custom-tag-input" type="text" v-model="customTagInput" placeholder="自定义标签" @confirm="addCustomTag" />
+          <button class="btn-add-tag" @click="addCustomTag">添加</button>
+        </view>
+        <view class="tags-container" v-if="customTags.length">
+          <view class="tag-item active" v-for="(tag, index) in customTags" :key="'c'+index" @click="removeCustomTag(index)">
+            <text>{{ tag }} x</text>
+          </view>
+        </view>
+        <view class="form-tip">点击选择标签，也可自定义添加，最多选择5个</view>
       </view>
 
       <button class="btn-next" @click="nextStep">下一步</button>
@@ -150,6 +180,8 @@ export default {
         password: '',
         confirmPassword: '',
         name: '',
+        stageName: '',
+        email: '',
         gender: '',
         yearsOfExperience: '',
         avatar: '',
@@ -162,7 +194,11 @@ export default {
       avatarPreview: '',
       certificatePreview: '',
       agreed: false,
-      loading: false
+      loading: false,
+      predefinedTags: ['婚礼主持', '商务主持', '双语主持', '中式婚礼', '西式婚礼', '户外婚礼', '创意婚礼', '高端定制'],
+      selectedTags: [],
+      customTags: [],
+      customTagInput: ''
     }
   },
 
@@ -193,11 +229,54 @@ export default {
         uni.showToast({ title: '请输入真实姓名', icon: 'none' })
         return false
       }
+      if (!this.form.email) {
+        uni.showToast({ title: '请输入邮箱地址', icon: 'none' })
+        return false
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.form.email)) {
+        uni.showToast({ title: '邮箱格式不正确', icon: 'none' })
+        return false
+      }
       if (!this.form.gender) {
         uni.showToast({ title: '请选择性别', icon: 'none' })
         return false
       }
       return true
+    },
+
+    // 标签相关方法
+    toggleTag(tag) {
+      const allTags = [...this.selectedTags, ...this.customTags]
+      const idx = this.selectedTags.indexOf(tag)
+      if (idx > -1) {
+        this.selectedTags.splice(idx, 1)
+      } else {
+        if (allTags.length >= 5) {
+          uni.showToast({ title: '最多选择5个标签', icon: 'none' })
+          return
+        }
+        this.selectedTags.push(tag)
+      }
+    },
+
+    addCustomTag() {
+      const tag = this.customTagInput.trim()
+      if (!tag) return
+      const allTags = [...this.selectedTags, ...this.customTags]
+      if (allTags.length >= 5) {
+        uni.showToast({ title: '最多选择5个标签', icon: 'none' })
+        return
+      }
+      if (allTags.includes(tag)) {
+        uni.showToast({ title: '标签已存在', icon: 'none' })
+        return
+      }
+      this.customTags.push(tag)
+      this.customTagInput = ''
+    },
+
+    removeCustomTag(index) {
+      this.customTags.splice(index, 1)
     },
 
     nextStep() {
@@ -292,16 +371,21 @@ export default {
           serviceAreas = JSON.stringify(areas)
         }
 
+        const allTags = [...this.selectedTags, ...this.customTags]
+
         const submitData = {
           phone: this.form.phone,
           password: this.form.password,
           name: this.form.name,
+          stageName: this.form.stageName || null,
+          email: this.form.email,
           gender: this.form.gender,
           yearsOfExperience: this.form.yearsOfExperience ? parseInt(this.form.yearsOfExperience) : null,
           avatar: this.form.avatar || null,
           certificate: this.form.certificate || null,
           price: this.form.price ? parseFloat(this.form.price) : null,
           serviceAreas: serviceAreas || null,
+          tags: allTags.length ? JSON.stringify(allTags) : null,
           description: this.form.description || null
         }
 
@@ -479,6 +563,58 @@ export default {
       color: #1d4ed8;
       font-weight: bold;
     }
+  }
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+
+  .tag-item {
+    padding: 12rpx 28rpx;
+    background-color: #f5f7fa;
+    border-radius: 32rpx;
+    font-size: 24rpx;
+    color: #666;
+    border: 2rpx solid transparent;
+
+    &.active {
+      background-color: rgba(29, 78, 216, 0.1);
+      border-color: #1d4ed8;
+      color: #1d4ed8;
+      font-weight: bold;
+    }
+  }
+}
+
+.custom-tag-row {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+  margin-bottom: 16rpx;
+
+  .custom-tag-input {
+    flex: 1;
+    height: 72rpx;
+    padding: 0 24rpx;
+    background-color: #f5f7fa;
+    border-radius: 12rpx;
+    font-size: 26rpx;
+    color: #333;
+  }
+
+  .btn-add-tag {
+    width: 140rpx;
+    height: 72rpx;
+    background-color: #1d4ed8;
+    color: #fff;
+    border: none;
+    border-radius: 12rpx;
+    font-size: 26rpx;
+    line-height: 72rpx;
+    padding: 0;
   }
 }
 

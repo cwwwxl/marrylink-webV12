@@ -17,6 +17,7 @@ Vue.mixin({
     const whiteList = [
       'pages/login/index',
       'pages/register/index',
+      'pages/host-register/index',
       'pages/host/index',
       'pages/host/detail',
       'pages/index/index'

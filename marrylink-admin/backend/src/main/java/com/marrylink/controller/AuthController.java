@@ -8,6 +8,7 @@ import com.marrylink.dto.HostRegisterRequest;
 import com.marrylink.dto.RegisterRequest;
 import com.marrylink.entity.AccountMapping;
 import com.marrylink.entity.Host;
+import com.marrylink.entity.HostTag;
 import com.marrylink.entity.SysRole;
 import com.marrylink.entity.SysUserRole;
 import com.marrylink.entity.User;
@@ -16,6 +17,7 @@ import com.marrylink.security.CustomUserDetails;
 import com.marrylink.security.JwtTokenProvider;
 import com.marrylink.service.AccountMappingService;
 import com.marrylink.service.IHostService;
+import com.marrylink.service.IHostTagService;
 import com.marrylink.service.IUserService;
 import com.marrylink.service.PermissionService;
 import com.marrylink.service.RoleService;
@@ -59,6 +61,7 @@ public class AuthController {
     private final AccountMappingService accountMappingService;
     private final IUserService userService;
     private final IHostService hostService;
+    private final IHostTagService hostTagService;
     private final RoleService roleService;
     private final PermissionService permissionService;
     private final UserRoleService userRoleService;
@@ -292,6 +295,8 @@ public class AuthController {
             Host host = new Host();
             host.setHostCode(hostCode);
             host.setName(request.getName());
+            host.setStageName(request.getStageName());
+            host.setEmail(request.getEmail());
             host.setGender(request.getGender());
             host.setYearsOfExperience(request.getYearsOfExperience());
             host.setPhone(request.getPhone());
@@ -311,6 +316,16 @@ public class AuthController {
             }
 
             hostService.save(host);
+
+            // 保存标签关联
+            if (request.getTags() != null && !request.getTags().isEmpty()) {
+                for (String tagCode : request.getTags()) {
+                    HostTag hostTag = new HostTag();
+                    hostTag.setHostId(host.getId());
+                    hostTag.setTagCode(tagCode);
+                    hostTagService.save(hostTag);
+                }
+            }
 
             // 4. 创建账号映射（状态正常，但host status=2待审核 控制是否可用）
             AccountMapping accountMapping = new AccountMapping();

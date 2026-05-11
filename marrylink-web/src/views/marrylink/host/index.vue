@@ -43,31 +43,55 @@
       </div>
 
       <el-table v-loading="loading" :data="pageData" border stripe>
-        <!-- <el-table-column label="主持人编号" prop="hostCode" width="120" /> -->
-        <el-table-column label="姓名" prop="name" width="100" />
-        <el-table-column label="艺名" prop="stageName" width="100" />
-        <el-table-column label="手机号" prop="phone" width="120" />
-        <!-- <el-table-column label="服务地区" prop="serviceAreas" width="150" /> -->
-        <el-table-column label="服务价格" prop="price" width="100">
+        <el-table-column label="头像" width="80">
           <template #default="scope">
-            ¥{{ scope.row.price }}/场
+            <el-image
+              v-if="scope.row.avatar"
+              :src="getImageUrl(scope.row.avatar)"
+              :preview-src-list="[getImageUrl(scope.row.avatar)]"
+              fit="cover"
+              style="width: 40px; height: 40px; border-radius: 50%;"
+            />
+            <span v-else>-</span>
           </template>
         </el-table-column>
-        <el-table-column label="评分" prop="rating" width="80" />
+        <el-table-column label="姓名" prop="name" width="90" />
+        <el-table-column label="艺名" prop="stageName" width="90">
+          <template #default="scope">{{ scope.row.stageName || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="性别" prop="gender" width="60">
+          <template #default="scope">{{ scope.row.gender || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="手机号" prop="phone" width="120" />
+        <el-table-column label="邮箱" prop="email" width="160">
+          <template #default="scope">{{ scope.row.email || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="服务价格" prop="price" width="100">
+          <template #default="scope">
+            {{ scope.row.price ? '¥' + scope.row.price + '/场' : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="评分" prop="rating" width="70" />
         <el-table-column label="标签" prop="tags" width="200">
           <template #default="scope">
-            <el-tag
-              v-for="(val, idx) in scope.row.tags"
-              :key="idx"
-              :type="getTagType(scope.$index)"
-              effect="light"
-              round
-              size="small"
-              class="tag-item"
-            >
-              {{ getTagName(val) }}
-            </el-tag>
+            <template v-if="scope.row.tags && scope.row.tags.length">
+              <el-tag
+                v-for="(val, idx) in scope.row.tags"
+                :key="idx"
+                :type="getTagType(idx)"
+                effect="light"
+                round
+                size="small"
+                class="tag-item"
+              >
+                {{ getTagName(val) }}
+              </el-tag>
+            </template>
+            <span v-else>-</span>
           </template>
+        </el-table-column>
+        <el-table-column label="从业年限" width="90">
+          <template #default="scope">{{ scope.row.yearsOfExperience ? scope.row.yearsOfExperience + '年' : '-' }}</template>
         </el-table-column>
         <el-table-column label="订单数" prop="orderCount" width="80" />
         <el-table-column label="状态" width="90">
@@ -77,9 +101,12 @@
             <el-tag v-else type="info">禁用</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="入驻时间" prop="joinTime" width="150" />
+        <el-table-column label="入驻时间" prop="joinTime" width="120" />
         <el-table-column label="操作" fixed="right" width="280">
           <template #default="scope">
+            <el-button type="primary" icon="view" link size="small" @click="handleOpenAuditDetail(scope.row)">
+              查看
+            </el-button>
             <template v-if="scope.row.status == 2 && isAdmin">
               <el-button type="success" icon="check" link size="small" @click="handleAudit(scope.row.id, 'approve')">
                 通过
@@ -87,18 +114,13 @@
               <el-button type="danger" icon="close" link size="small" @click="handleAudit(scope.row.id, 'reject')">
                 拒绝
               </el-button>
-              <el-button type="primary" icon="view" link size="small" @click="handleOpenAuditDetail(scope.row)">
-                查看
-              </el-button>
             </template>
-            <template v-else>
-              <el-button type="primary" icon="edit" link size="small" @click="handleOpenDialog(scope.row.id)">
-                编辑
-              </el-button>
-              <el-button type="danger" icon="delete" link size="small" @click="handleDelete(scope.row.id)">
-                删除
-              </el-button>
-            </template>
+            <el-button type="primary" icon="edit" link size="small" @click="handleOpenDialog(scope.row.id)">
+              编辑
+            </el-button>
+            <el-button type="danger" icon="delete" link size="small" @click="handleDelete(scope.row.id)">
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -212,33 +234,53 @@
         <el-button type="primary" :loading="importLoading" @click="handleImportSubmit">确定导入</el-button>
       </template>
     </el-dialog>
-    <!-- 入驻审核详情弹窗 -->
-    <el-dialog v-model="auditDialog.visible" title="入驻申请详情" width="600px">
+    <!-- 主持人详情弹窗 -->
+    <el-dialog v-model="auditDialog.visible" title="主持人详情" width="650px">
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="姓名">{{ auditDialog.data.name }}</el-descriptions-item>
+        <el-descriptions-item label="姓名">{{ auditDialog.data.name || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="艺名">{{ auditDialog.data.stageName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="性别">{{ auditDialog.data.gender || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="手机号">{{ auditDialog.data.phone }}</el-descriptions-item>
+        <el-descriptions-item label="手机号">{{ auditDialog.data.phone || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="邮箱">{{ auditDialog.data.email || '-' }}</el-descriptions-item>
         <el-descriptions-item label="从业年限">{{ auditDialog.data.yearsOfExperience ? auditDialog.data.yearsOfExperience + '年' : '-' }}</el-descriptions-item>
         <el-descriptions-item label="服务报价">{{ auditDialog.data.price ? '¥' + auditDialog.data.price + '/场' : '-' }}</el-descriptions-item>
+        <el-descriptions-item label="评分">{{ auditDialog.data.rating || '-' }}</el-descriptions-item>
         <el-descriptions-item label="服务区域">{{ formatServiceAreas(auditDialog.data.serviceAreas) }}</el-descriptions-item>
+        <el-descriptions-item label="订单数">{{ auditDialog.data.orderCount ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="标签" :span="2">
+          <template v-if="auditDialog.data.tags && auditDialog.data.tags.length">
+            <el-tag v-for="(val, idx) in auditDialog.data.tags" :key="idx" :type="getTagType(idx)" effect="light" round size="small" style="margin-right: 6px;">
+              {{ getTagName(val) }}
+            </el-tag>
+          </template>
+          <span v-else>-</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag v-if="auditDialog.data.status == 1" type="success">正常</el-tag>
+          <el-tag v-else-if="auditDialog.data.status == 2" type="warning">待审核</el-tag>
+          <el-tag v-else type="info">禁用</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="入驻时间">{{ auditDialog.data.joinTime || '-' }}</el-descriptions-item>
         <el-descriptions-item label="个人简介" :span="2">{{ auditDialog.data.description || '-' }}</el-descriptions-item>
       </el-descriptions>
 
       <div class="audit-images" v-if="auditDialog.data.avatar || auditDialog.data.certificate">
         <div class="audit-image-item" v-if="auditDialog.data.avatar">
           <div class="audit-image-label">个人照片</div>
-          <el-image :src="baseUrl + auditDialog.data.avatar" :preview-src-list="[baseUrl + auditDialog.data.avatar]" fit="cover" style="width: 120px; height: 120px; border-radius: 8px;" />
+          <el-image :src="getImageUrl(auditDialog.data.avatar)" :preview-src-list="[getImageUrl(auditDialog.data.avatar)]" fit="cover" style="width: 120px; height: 120px; border-radius: 8px;" />
         </div>
         <div class="audit-image-item" v-if="auditDialog.data.certificate">
           <div class="audit-image-label">资质证明</div>
-          <el-image :src="baseUrl + auditDialog.data.certificate" :preview-src-list="[baseUrl + auditDialog.data.certificate]" fit="cover" style="width: 120px; height: 120px; border-radius: 8px;" />
+          <el-image :src="getImageUrl(auditDialog.data.certificate)" :preview-src-list="[getImageUrl(auditDialog.data.certificate)]" fit="cover" style="width: 120px; height: 120px; border-radius: 8px;" />
         </div>
       </div>
 
       <template #footer>
         <el-button @click="auditDialog.visible = false">关闭</el-button>
-        <el-button type="danger" @click="handleAudit(auditDialog.data.id, 'reject'); auditDialog.visible = false">拒绝</el-button>
-        <el-button type="success" @click="handleAudit(auditDialog.data.id, 'approve'); auditDialog.visible = false">通过</el-button>
+        <template v-if="auditDialog.data.status == 2 && isAdmin">
+          <el-button type="danger" @click="handleAudit(auditDialog.data.id, 'reject'); auditDialog.visible = false">拒绝</el-button>
+          <el-button type="success" @click="handleAudit(auditDialog.data.id, 'approve'); auditDialog.visible = false">通过</el-button>
+        </template>
       </template>
     </el-dialog>
   </div>
@@ -253,7 +295,13 @@ import Pagination from '@/components/Pagination/index.vue'
 import { useUserStore } from '@/store/modules/user'
 import { TOKEN_KEY } from '@/enums/CacheEnum'
 
-const baseUrl = import.meta.env.VITE_APP_BASE_API
+// 构建图片URL：直接使用 /uploads/... 路径（通过vite proxy代理到后端）
+function getImageUrl(path) {
+  if (!path) return ''
+  // 如果已经是完整URL则直接返回
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  return path
+}
 
 const queryParams = reactive({
   current: 1,

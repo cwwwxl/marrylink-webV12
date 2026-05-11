@@ -63,6 +63,13 @@ export function uploadHostRegisterFile(filePath, type = 'photo') {
 }
 
 /**
+ * 获取标签列表（公开接口，无需token）
+ */
+export function getTagList(categoryCode) {
+  return get('/tag/list', { categoryCode })
+}
+
+/**
  * 获取用户信息
  */
 export function getUserInfo() {

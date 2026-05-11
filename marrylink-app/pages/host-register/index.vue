@@ -71,22 +71,17 @@
 
       <view class="form-item">
         <view class="form-label"><text>个人标签</text></view>
-        <view class="tags-container">
-          <view class="tag-item" v-for="(tag, index) in predefinedTags" :key="index"
-            :class="{ active: selectedTags.includes(tag) }" @click="toggleTag(tag)">
-            <text>{{ tag }}</text>
+        <view class="tags-selector">
+          <view class="tag-option" v-for="(tag, index) in tagOptions" :key="index"
+            :class="{ active: selectedTagCodes.includes(tag.code) }" @click="toggleTag(tag.code)">
+            <text>{{ tag.name }}</text>
           </view>
         </view>
-        <view class="custom-tag-row">
-          <input class="form-input custom-tag-input" type="text" v-model="customTagInput" placeholder="自定义标签" @confirm="addCustomTag" />
-          <button class="btn-add-tag" @click="addCustomTag">添加</button>
+        <view class="selected-tags" v-if="selectedTagCodes.length">
+          <text class="selected-label">已选: </text>
+          <text class="selected-tag" v-for="(code, idx) in selectedTagCodes" :key="idx">{{ getTagNameByCode(code) }}<text v-if="idx < selectedTagCodes.length - 1">、</text></text>
         </view>
-        <view class="tags-container" v-if="customTags.length">
-          <view class="tag-item active" v-for="(tag, index) in customTags" :key="'c'+index" @click="removeCustomTag(index)">
-            <text>{{ tag }} x</text>
-          </view>
-        </view>
-        <view class="form-tip">点击选择标签，也可自定义添加，最多选择5个</view>
+        <view class="form-tip">点击选择标签，最多选择5个</view>
       </view>
 
       <button class="btn-next" @click="nextStep">下一步</button>
@@ -168,7 +163,7 @@
 </template>
 
 <script>
-import { registerHost, uploadHostRegisterFile } from '@/api/user'
+import { registerHost, uploadHostRegisterFile, getTagList } from '@/api/user'
 import { BASE_URL } from '@/utils/request'
 
 export default {
@@ -195,14 +190,31 @@ export default {
       certificatePreview: '',
       agreed: false,
       loading: false,
-      predefinedTags: ['婚礼主持', '商务主持', '双语主持', '中式婚礼', '西式婚礼', '户外婚礼', '创意婚礼', '高端定制'],
-      selectedTags: [],
-      customTags: [],
-      customTagInput: ''
+      tagOptions: [],
+      selectedTagCodes: []
+    }
+  },
+
+  async onLoad() {
+    try {
+      const res = await getTagList('01')
+      if (Array.isArray(res)) {
+        this.tagOptions = res
+      } else if (res && res.data && Array.isArray(res.data)) {
+        this.tagOptions = res.data
+      }
+    } catch (e) {
+      console.error('获取标签列表失败:', e)
     }
   },
 
   methods: {
+    // 根据code获取标签名称
+    getTagNameByCode(code) {
+      const tag = this.tagOptions.find(t => t.code === code)
+      return tag ? tag.name : code
+    },
+
     // Step 1 validation
     validateStep1() {
       if (!this.form.phone) {
@@ -244,39 +256,18 @@ export default {
       return true
     },
 
-    // 标签相关方法
-    toggleTag(tag) {
-      const allTags = [...this.selectedTags, ...this.customTags]
-      const idx = this.selectedTags.indexOf(tag)
+    // 标签选择
+    toggleTag(code) {
+      const idx = this.selectedTagCodes.indexOf(code)
       if (idx > -1) {
-        this.selectedTags.splice(idx, 1)
+        this.selectedTagCodes.splice(idx, 1)
       } else {
-        if (allTags.length >= 5) {
+        if (this.selectedTagCodes.length >= 5) {
           uni.showToast({ title: '最多选择5个标签', icon: 'none' })
           return
         }
-        this.selectedTags.push(tag)
+        this.selectedTagCodes.push(code)
       }
-    },
-
-    addCustomTag() {
-      const tag = this.customTagInput.trim()
-      if (!tag) return
-      const allTags = [...this.selectedTags, ...this.customTags]
-      if (allTags.length >= 5) {
-        uni.showToast({ title: '最多选择5个标签', icon: 'none' })
-        return
-      }
-      if (allTags.includes(tag)) {
-        uni.showToast({ title: '标签已存在', icon: 'none' })
-        return
-      }
-      this.customTags.push(tag)
-      this.customTagInput = ''
-    },
-
-    removeCustomTag(index) {
-      this.customTags.splice(index, 1)
     },
 
     nextStep() {
@@ -371,8 +362,6 @@ export default {
           serviceAreas = JSON.stringify(areas)
         }
 
-        const allTags = [...this.selectedTags, ...this.customTags]
-
         const submitData = {
           phone: this.form.phone,
           password: this.form.password,
@@ -385,7 +374,7 @@ export default {
           certificate: this.form.certificate || null,
           price: this.form.price ? parseFloat(this.form.price) : null,
           serviceAreas: serviceAreas || null,
-          tags: allTags.length ? JSON.stringify(allTags) : null,
+          tags: this.selectedTagCodes.length ? this.selectedTagCodes : null,
           description: this.form.description || null
         }
 
@@ -566,14 +555,14 @@ export default {
   }
 }
 
-.tags-container {
+.tags-selector {
   display: flex;
   flex-wrap: wrap;
   gap: 16rpx;
   margin-bottom: 16rpx;
 
-  .tag-item {
-    padding: 12rpx 28rpx;
+  .tag-option {
+    padding: 14rpx 30rpx;
     background-color: #f5f7fa;
     border-radius: 32rpx;
     font-size: 24rpx;
@@ -589,32 +578,13 @@ export default {
   }
 }
 
-.custom-tag-row {
-  display: flex;
-  gap: 16rpx;
-  align-items: center;
-  margin-bottom: 16rpx;
+.selected-tags {
+  margin-bottom: 8rpx;
+  font-size: 24rpx;
+  color: #1d4ed8;
 
-  .custom-tag-input {
-    flex: 1;
-    height: 72rpx;
-    padding: 0 24rpx;
-    background-color: #f5f7fa;
-    border-radius: 12rpx;
-    font-size: 26rpx;
-    color: #333;
-  }
-
-  .btn-add-tag {
-    width: 140rpx;
-    height: 72rpx;
-    background-color: #1d4ed8;
-    color: #fff;
-    border: none;
-    border-radius: 12rpx;
-    font-size: 26rpx;
-    line-height: 72rpx;
-    padding: 0;
+  .selected-label {
+    color: #999;
   }
 }
 

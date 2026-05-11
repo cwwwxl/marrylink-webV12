@@ -5,6 +5,7 @@ import lombok.Data;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 主持人注册请求DTO
@@ -30,6 +31,16 @@ public class HostRegisterRequest {
      */
     @NotBlank(message = "姓名不能为空")
     private String name;
+
+    /**
+     * 艺名
+     */
+    private String stageName;
+
+    /**
+     * 邮箱
+     */
+    private String email;
 
     /**
      * 性别：男/女
@@ -66,4 +77,9 @@ public class HostRegisterRequest {
      * 资质证明URL（注册时上传后回填）
      */
     private String certificate;
+
+    /**
+     * 标签code列表
+     */
+    private List<String> tags;
 }

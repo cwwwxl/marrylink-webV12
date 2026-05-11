@@ -60,6 +60,11 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       // 运行是否自动打开浏览器
       open: true,
       proxy: {
+        /** 代理上传文件请求，直接到后端根路径（不带/api/v1前缀） */
+        "/uploads": {
+          changeOrigin: true,
+          target: "http://127.0.0.1:8080",
+        },
         /** 代理前缀为 /dev-api 的请求  */
         [env.VITE_APP_BASE_API]: {
           changeOrigin: true,

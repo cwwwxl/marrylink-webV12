@@ -399,11 +399,13 @@ public class AuthController {
     }
 
     /**
-     * 生成主持人编号（MC + 4位序号）
+     * 生成主持人编号（MC + 时间戳后6位 + 随机2位）
+     * 避免软删除记录导致的host_code唯一键冲突
      */
     private String generateHostCode() {
-        long count = hostService.count();
-        return String.format("MC%04d", count + 1);
+        long ts = System.currentTimeMillis() % 1000000;
+        int rand = (int) (Math.random() * 100);
+        return String.format("MC%06d%02d", ts, rand);
     }
 
     /**
